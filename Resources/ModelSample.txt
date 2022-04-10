@@ -1,0 +1,13 @@
+from torch import nn
+
+
+class <name>(nn.Module):
+    def __init__(self):
+        super(<name>, self).__init__()
+
+        self.model = nn.Sequential(
+<layers>
+        )
+
+    def forward(self, x):
+        return self.model(x)
