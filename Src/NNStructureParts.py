@@ -19,7 +19,6 @@ FUNCNAMES = {
 
 
 class NNModel:
-    # TODO 将输入输出抽象为层对象
     def __init__(self, inputNum, outputNum):
         self.inputNum = inputNum
         self.outputNum = outputNum

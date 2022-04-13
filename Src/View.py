@@ -1,14 +1,15 @@
 from PyQt5 import uic
-from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton
+from PyQt5.QtCore import QSize
+from PyQt5.QtWidgets import QMainWindow
 
 import Components
 
 uiPath = "Resources/UI/MainWindow.ui"
 
-LayerType = {
-    "InputLayer": Components.InputLayerWidget,
-    "OutputLayer": Components.OutputLayerWidgt,
-    "FullConnectedLayer": Components.FullConnectedLayerWidget
+layerTypes = {
+    "InputLayer": (Components.InputLayerWidget, QSize(150, 50)),
+    "OutputLayer": (Components.OutputLayerWidgt, QSize(150, 50)),
+    "FullConnectedLayer": (Components.FullConnectedLayerWidget, QSize(250, 50))
 }
 
 
@@ -24,9 +25,8 @@ class MainWindow(QMainWindow):
         self.connections = []
 
     def DisplayNewLayer(self, layerType):
-        layerInstance = LayerType[layerType](self.nnContainer)
+        layerInstance = layerTypes[layerType][0](self.nnContainer, layerTypes[layerType][1])
 
-        layerInstance.setParent(self.nnContainer)
         layerInstance.move(300, self.layers.__len__()*350)
         layerInstance.show()
 

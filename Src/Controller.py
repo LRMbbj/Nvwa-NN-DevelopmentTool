@@ -5,6 +5,11 @@ import Components
 import Model
 
 
+inputLayerName = "inputLayer"
+outputLayerName = "outputLayer"
+ioLayerNames = [inputLayerName, outputLayerName]
+
+
 class Controller:
     def __init__(self):
         self.model = Model.Model()
@@ -51,17 +56,15 @@ class Controller:
         layerOutputObject = None
         nodeNum = 0
 
-        layerItems = self.model.nn.hiddenLayers[:]
-        layerItems.append("inputlayer")
-        layerItems.append("outputlayer")
+        layerItems = self.model.nn.hiddenLayers
 
-        value, ok = QInputDialog.getItem(self.view, "输入", "输入层对象", layerItems)
+        value, ok = QInputDialog.getItem(self.view, "输入", "输入层对象", layerItems + [inputLayerName])
         if ok:
-            layerInputObject = value
+            layerInputObject = (value, self.model)[value not in ioLayerNames]
 
-        value, ok = QInputDialog.getItem(self.view, "输入", "输出层对象", layerItems)
+        value, ok = QInputDialog.getItem(self.view, "输入", "输出层对象", layerItems + [outputLayerName])
         if ok:
-            layerOutputObject = value
+            layerOutputObject = (value, self.model)[value not in ioLayerNames]
 
         value, ok = QInputDialog.getInt(self.view, "输入", "节点数", min=1)
         if ok:
@@ -70,8 +73,10 @@ class Controller:
         assert layerInputObject is not None and layerOutputObject is not None and nodeNum > 0
         "Layer IO layer cannot be empty"
 
+        # model处理
         self.model.CreateFullConnectedLayer(nodeNum, layerInputObject, layerOutputObject)
 
+        # view处理
         fullConnectedLayerWidget = self.view.DisplayNewLayer("FullConnectedLayer")
         fullConnectedLayerWidget.SetInputLayer(layerInputObject)
         fullConnectedLayerWidget.SetOutputLayer(layerOutputObject)

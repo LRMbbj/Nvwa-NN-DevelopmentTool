@@ -4,14 +4,32 @@ from PyQt5.QtWidgets import QWidget
 
 
 # 神经网络层组件
-class InputLayerWidget(QWidget):
-    def __init__(self, parent):
-        super(InputLayerWidget, self).__init__(parent)
+class NNLayerWidget(QWidget):
+    def __init__(self, parent, size):
+        super(NNLayerWidget, self).__init__(parent)
+        self.currentPos = None
+        self.resize(size)
+
+    def mousePressEvent(self, e: QtGui.QMouseEvent) -> None:
+        print(e.pos())
+        self.currentPos = e.pos()
+        e.accept()
+
+    def mouseMoveEvent(self, e: QtGui.QMouseEvent) -> None:
+        newPos = self.mapTo(self.parent(), self.mapFromGlobal(e.globalPos() - self.currentPos))
+        print(newPos)
+
+        self.move(newPos)
+
+        e.accept()
+
+
+class InputLayerWidget(NNLayerWidget):
+    def __init__(self, parent, size):
+        super(InputLayerWidget, self).__init__(parent, size)
 
         self.nodeNum = 0
         self.outputLayer = None
-
-        self.resize(250, 100)
 
     def SetNodeNum(self, num):
         """
@@ -50,14 +68,12 @@ class InputLayerWidget(QWidget):
         painter.end()
 
 
-class OutputLayerWidgt(QWidget):
-    def __init__(self, parent):
-        super(OutputLayerWidgt, self).__init__(parent)
+class OutputLayerWidgt(NNLayerWidget):
+    def __init__(self, parent, size):
+        super(OutputLayerWidgt, self).__init__(parent, size)
 
         self.nodeNum = 0
         self.inputLayer = None
-
-        self.resize(250, 100)
 
     def SetNodeNum(self, num):
         """
@@ -96,15 +112,13 @@ class OutputLayerWidgt(QWidget):
         painter.end()
 
 
-class FullConnectedLayerWidget(QWidget):
-    def __init__(self, parent):
-        super(FullConnectedLayerWidget, self).__init__(parent)
+class FullConnectedLayerWidget(NNLayerWidget):
+    def __init__(self, parent, size):
+        super(FullConnectedLayerWidget, self).__init__(parent, size)
 
         self.nodeNum = 0
         self.inputLayer = None
         self.outputLayer = None
-
-        self.resize(500, 100)
 
     def SetNodeNum(self, num):
         """
@@ -149,3 +163,15 @@ class FullConnectedLayerWidget(QWidget):
                          "Inputput->{}\nnode->{}\nOutput->{}".format(self.inputLayer, self.nodeNum, self.outputLayer))
 
         painter.end()
+
+
+# 神经网络数据管道组件
+class NNDataPipe(QWidget):
+    def __init__(self, parent, inputObject, outputObject):
+        super(NNDataPipe, self).__init__(parent)
+        self.inputObject = inputObject
+        self.outputObject = outputObject
+
+    def paintEvent(self, e: QtGui.QPaintEvent) -> None:
+        # TODO 实现渲染函数
+        pass
