@@ -1,4 +1,4 @@
-# Nvwa-NN-DevelopmentTool ![](https://unv-shield.librian.net/api/unv_shield?repo=LRMbbj/Nvwa-NN-DevelopmentTool&url=https://avatars.githubusercontent.com/u/73622238&barradius=999)
+# Nvwa-NN-DevelopmentTool ![](https://unv-shield.librian.net/api/unv_shield?repo=LRMbbj/Nvwa-NN-DevelopmentTool&url=https://avatars.githubusercontent.com/u/73622238&barradius=999&)
 
 ![](https://unv-shield.librian.net/api/unv_shield?txt=LRMbbj&url=https://avatars.githubusercontent.com/u/73622238&barradius=999)![](https://unv-shield.librian.net/api/unv_shield?txt=神经网络&url=https://avatars.githubusercontent.com/u/73622238&barradius=999)![](https://unv-shield.librian.net/api/unv_shield?txt=可视化&url=https://avatars.githubusercontent.com/u/73622238&barradius=999)
 
