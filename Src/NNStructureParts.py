@@ -18,27 +18,56 @@ FUNCNAMES = {
 }
 
 
-class NNModel:
-    def __init__(self, inputNum, outputNum):
-        self.inputNum = inputNum
-        self.outputNum = outputNum
+class NNLayer:
+    def __init__(self, inputObject=None, outputObject=None):
+        self.inputObject = inputObject
+        self.outputObject = outputObject
+
+    def SetInputObject(self, obj):
+        self.inputObject = obj
+
+    def GetInputObject(self):
+        return self.inputObject
+
+    def SetOutputObject(self, obj):
+        self.outputObject = obj
+
+    def GetOutputObject(self):
+        return self.outputObject
+
+
+class NNModel(NNLayer):
+    def __init__(self, nnInputNum, nnOutputNum):
+        super(NNModel, self).__init__()
+        self.inputNum = nnOutputNum
+        self.outputNum = nnInputNum
+
+        self.nnInputLayer = NNFullConnectedLayer(nnInputNum)
+        self.nnOutputLayer = NNFullConnectedLayer(nnOutputNum)
+        self.nnInputLayer.SetOutputObject(self.nnOutputLayer)
+        self.nnOutputLayer.SetInputObject(self.nnInputLayer)
 
         self.formatFile = "../Resources/ModelSample.txt"
 
-        self.hiddenLayers = []
+        self.layers = [self.nnOutputLayer]
 
     def AppendLayer(self, layer):
-        self.hiddenLayers.append(layer)
+        self.layers.append(layer)
 
-    def Serialize(self, name, filepath):
+    def RemoveLayer(self, layer):
+        self.layers.remove(layer)
+
+    def Serialize(self, modelName, filepath):
         layerSerialized = ""
 
-        for layer in self.hiddenLayers:
-            layerSerialized += layer.Serialize()
+        layer = self.nnInputLayer
+        while layer.GetOutputObject() is not None:
+            layerSerialized += layer.GetOutputObject().Serialize()
+            layer = layer.GetOutputObject()
 
         srcF = open(self.formatFile, 'r')
         out = str(srcF.read())
-        out = re.sub("<name>", name, out)
+        out = re.sub("<name>", modelName, out)
         out = re.sub("<layers>", layerSerialized, out)
 
         with open(filepath, 'w') as F:
@@ -47,20 +76,8 @@ class NNModel:
         srcF.close()
 
 
-class NNLayer:
-    def __init__(self, inputObject, outputObject):
-        self.inputObject = inputObject
-        self.outputObject = outputObject
-
-    def SetInputObject(self, obj):
-        self.inputObject = obj
-
-    def SetOutputObject(self, obj):
-        self.outputObject = obj
-
-
 class NNFullConnectedLayer(NNLayer):
-    def __init__(self, nodeNum, inputObject=None, outputObject=None, activationFunc=ActivationFuncs.NoFunc):
+    def __init__(self, nodeNum, activationFunc=ActivationFuncs.NoFunc, inputObject=None, outputObject=None):
         super(NNFullConnectedLayer, self).__init__(inputObject, outputObject)
 
         self.nodeNum = nodeNum
@@ -69,18 +86,9 @@ class NNFullConnectedLayer(NNLayer):
     def Serialize(self):
         # 线性层输入输出连接性检查
         assert self.inputObject is not None, "inputObject cannot be None"
-        assert self.outputObject is not None, "outputObject cannot be None"
 
-        out = "            nn.Linear(%d, %d),\n" % (self.inputObject.inputNum, self.nodeNum)
+        out = "            nn.Linear(%d, %d),\n" % (self.inputObject.nodeNum, self.nodeNum)
         if self.activationFunc != ActivationFuncs.NoFunc:
             out += "            nn.%s(inplace=True),\n" % FUNCNAMES[self.activationFunc]
 
         return out
-
-
-if __name__ == '__main__':
-    model = NNModel(3, 1)
-    model.AppendLayer(NNFullConnectedLayer(model, ActivationFuncs.ReLU))
-    model.hiddenLayers[0].outputObject = model
-
-    model.Serialize("myModel", "MyModel.py")

@@ -1,15 +1,15 @@
 from PyQt5 import uic
-from PyQt5.QtCore import QSize
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtCore import QSize, QSizeF, QPoint
+from PyQt5.QtWidgets import QMainWindow, QGraphicsView, QGraphicsScene
 
 import Components
 
 uiPath = "Resources/UI/MainWindow.ui"
 
 layerTypes = {
-    "InputLayer": (Components.InputLayerWidget, QSize(150, 50)),
-    "OutputLayer": (Components.OutputLayerWidgt, QSize(150, 50)),
-    "FullConnectedLayer": (Components.FullConnectedLayerWidget, QSize(250, 50))
+    "InputLayer": (Components.InputLayerWidget, QSizeF(150, 50)),
+    "OutputLayer": (Components.OutputLayerWidgt, QSizeF(150, 50)),
+    "FullConnectedLayer": (Components.FullConnectedLayerWidget, QSizeF(250, 50))
 }
 
 
@@ -18,17 +18,22 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ui = uic.loadUi(uiPath)
 
-        self.nnContainer = self.ui.nnContainer
+        self.ui.nnView = Components.NNGraphicsView(self.ui.centralwidget)
+        self.ui.nnView.setObjectName(u"nnView")
+        self.ui.horizontalLayout.addWidget(self.ui.nnView)
+        self.nnView = self.ui.nnView
+
         self.propertyContainer = self.ui.propertyBar
+        self.ui.horizontalLayout.addWidget(self.propertyContainer)
 
         self.layers = []
-        self.connections = []
+        self.pipes = []
 
-    def DisplayNewLayer(self, layerType):
-        layerInstance = layerTypes[layerType][0](self.nnContainer, layerTypes[layerType][1])
+    def DisplayNewLayer(self, layerType, nodeNum):
+        newLayer = layerTypes[layerType][0](layerTypes[layerType][1])
+        self.nnView.DisplayNewLayer(QPoint(0, 0), newLayer)
+        newLayer.SetNodeNum(nodeNum)
+        self.layers.append(newLayer)
 
-        layerInstance.move(300, self.layers.__len__()*350)
-        layerInstance.show()
-
-        self.layers.append(layerInstance)
-        return layerInstance
+    def DisplayNewPipe(self, obj1, obj2):
+        pass

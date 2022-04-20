@@ -40,29 +40,22 @@ class Controller:
 
         self.model.CreateNN(nnInputNum, nnOutputNum)
 
-        inputLayerWidget = self.view.DisplayNewLayer("InputLayer")
-        inputLayerWidget.SetNodeNum(nnInputNum)
+        inputLayerWidget = self.view.DisplayNewLayer("InputLayer", nnInputNum)
 
-        outputLayerWidget = self.view.DisplayNewLayer("OutputLayer")
-        outputLayerWidget.SetNodeNum(nnOutputNum)
-
-        inputLayerWidget.SetOutputObject(outputLayerWidget)
-        outputLayerWidget.SetInputObject(inputLayerWidget)
+        outputLayerWidget = self.view.DisplayNewLayer("OutputLayer", nnOutputNum)
 
     def OnCreateFullConnectedLayerClicked(self):
-        print("Press createFullConnectedLayer")
-
         layerInputObject = None
         layerOutputObject = None
         nodeNum = 0
 
-        layerItems = self.model.nn.hiddenLayers
+        layerItems = self.model.nn.layers
 
-        value, ok = QInputDialog.getItem(self.view, "输入", "输入层对象", layerItems + [inputLayerName])
+        value, ok = QInputDialog.getItem(self.view, "输入", "输入层对象", [str(x) for x in layerItems] + [inputLayerName])
         if ok:
             layerInputObject = (value, self.model)[value not in ioLayerNames]
 
-        value, ok = QInputDialog.getItem(self.view, "输入", "输出层对象", layerItems + [outputLayerName])
+        value, ok = QInputDialog.getItem(self.view, "输入", "输出层对象", [str(x) for x in layerItems] + [outputLayerName])
         if ok:
             layerOutputObject = (value, self.model)[value not in ioLayerNames]
 

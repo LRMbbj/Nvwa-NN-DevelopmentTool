@@ -1,177 +1,131 @@
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtCore import Qt, QPoint, QSize
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import Qt, QPoint, QSize, QLine, QRectF, QPointF, QSizeF
+from PyQt5.QtGui import QPainter, QBrush, QColor, QPen, QPainterPath
+from PyQt5.QtWidgets import QWidget, QGraphicsItem, QGraphicsScene, QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, \
+    QGraphicsPathItem
+
+
+# 神经网络场景
+class NNGraphicsScene(QGraphicsScene):
+    def __init__(self, parent=None):
+        super(NNGraphicsScene, self).__init__(parent)
+
+        self.layers = []
+        self.pipes = []
+
+    def AddLayer(self, layer):
+        self.layers.append(layer)
+        self.addItem(layer)
+
+    def RemoveLayer(self, layer):
+        self.layers.remove(layer)
+        self.removeItem(layer)
+
+    def AddPipe(self, pipe):
+        self.pipes.append(pipe)
+        self.addItem(pipe)
+
+    def RemovePipe(self, pipe):
+        self.pipes.remove(pipe)
+        self.removeItem(pipe)
+
+
+# 神经网络场景视图
+class NNGraphicsView(QGraphicsView):
+    def __init__(self, parent):
+        super(NNGraphicsView, self).__init__(parent)
+        self.scene = NNGraphicsScene(self)
+        self.setScene(self.scene)
+        self.setDragMode(self.RubberBandDrag)
+
+        self.setRenderHints(QPainter.Antialiasing |
+                            QPainter.HighQualityAntialiasing |
+                            QPainter.TextAntialiasing |
+                            QPainter.SmoothPixmapTransform)
+
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setTransformationAnchor(self.AnchorUnderMouse)
+
+    def DisplayNewLayer(self, pos, layer):
+        layer.setPos(pos)
+        self.scene.AddLayer(layer)
 
 
 # 神经网络层组件
-class NNLayerWidget(QWidget):
-    def __init__(self, parent, size):
+class NNLayerWidget(QGraphicsRectItem):
+    def __init__(self, size, parent=None):
         super(NNLayerWidget, self).__init__(parent)
-        self.currentPos = None
-        self.resize(size)
+        self.setRect(QRectF(QPointF(0, 0), size))
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.ItemIsMovable)
 
-    def mousePressEvent(self, e: QtGui.QMouseEvent) -> None:
-        print(e.pos())
-        self.currentPos = e.pos()
-        e.accept()
+        self.nodeNum = 0
+        self.nodeNumWidget = QGraphicsTextItem(str(self.nodeNum), self)
 
-    def mouseMoveEvent(self, e: QtGui.QMouseEvent) -> None:
-        newPos = self.mapTo(self.parent(), self.mapFromGlobal(e.globalPos() - self.currentPos))
-        print(newPos)
-
-        self.move(newPos)
-
-        e.accept()
+    def SetNodeNum(self, nodeNum):
+        self.nodeNum = nodeNum
+        self.nodeNumWidget.setPlainText(str(self.nodeNum))
 
 
 class InputLayerWidget(NNLayerWidget):
-    def __init__(self, parent, size):
-        super(InputLayerWidget, self).__init__(parent, size)
-
-        self.nodeNum = 0
-        self.outputLayer = None
-
-    def SetNodeNum(self, num):
-        """
-        设置节点数
-        :param num: 节点数
-        """
-        self.nodeNum = num
-
-    def SetOutputObject(self, outputLayer):
-        """
-        设置输出层对象
-        :param outputLayer: 输出层对象
-        """
-        self.outputLayer = outputLayer
-
-    def paintEvent(self, e):
-        painter = QtGui.QPainter(self)
-        brush = QtGui.QBrush()
-
-        brush.setColor(QtGui.QColor("red"))
-        brush.setStyle(Qt.SolidPattern)
-        rect = QtCore.QRect(QPoint(0, 0), QSize(painter.device().width(), painter.device().height()))
-        painter.fillRect(rect, brush)
-
-        pen = painter.pen()
-        pen.setColor(QtGui.QColor('white'))
-        painter.setPen(pen)
-
-        font = painter.font()
-        font.setFamily('Times')
-        font.setPointSize(10)
-        painter.setFont(font)
-
-        painter.drawText(rect, Qt.AlignCenter, "node->{}\nOutput->{}".format(self.nodeNum, self.outputLayer))
-
-        painter.end()
+    def __init__(self, size, parent=None):
+        super(InputLayerWidget, self).__init__(size, parent)
 
 
 class OutputLayerWidgt(NNLayerWidget):
-    def __init__(self, parent, size):
-        super(OutputLayerWidgt, self).__init__(parent, size)
-
-        self.nodeNum = 0
-        self.inputLayer = None
-
-    def SetNodeNum(self, num):
-        """
-        设置节点数
-        :param num: 节点数
-        """
-        self.nodeNum = num
-
-    def SetInputObject(self, inputLayer):
-        """
-        设置输入层对象
-        :param inputLayer: 输入层对象
-        """
-        self.inputLayer = inputLayer
-
-    def paintEvent(self, e):
-        painter = QtGui.QPainter(self)
-        brush = QtGui.QBrush()
-
-        brush.setColor(QtGui.QColor("blue"))
-        brush.setStyle(Qt.SolidPattern)
-        rect = QtCore.QRect(QPoint(0, 0), QSize(painter.device().width(), painter.device().height()))
-        painter.fillRect(rect, brush)
-
-        pen = painter.pen()
-        pen.setColor(QtGui.QColor('white'))
-        painter.setPen(pen)
-
-        font = painter.font()
-        font.setFamily('Times')
-        font.setPointSize(10)
-        painter.setFont(font)
-
-        painter.drawText(rect, Qt.AlignCenter, "Inputput->{}\nnode->{}".format(self.inputLayer, self.nodeNum))
-
-        painter.end()
+    def __init__(self, size, parent=None):
+        super(OutputLayerWidgt, self).__init__(size, parent)
 
 
 class FullConnectedLayerWidget(NNLayerWidget):
-    def __init__(self, parent, size):
-        super(FullConnectedLayerWidget, self).__init__(parent, size)
-
-        self.nodeNum = 0
-        self.inputLayer = None
-        self.outputLayer = None
-
-    def SetNodeNum(self, num):
-        """
-        设置节点数
-        :param num: 节点数
-        """
-        self.nodeNum = num
-
-    def SetInputLayer(self, inputLayer):
-        """
-        设置输入层对象
-        :param inputLayer: 输入层对象
-        """
-        self.inputLayer = inputLayer
-
-    def SetOutputLayer(self, outputLayer):
-        """
-        设置输出层对象
-        :param outputLayer: 输出层对象
-        """
-        self.outputLayer = outputLayer
-
-    def paintEvent(self, e):
-        painter = QtGui.QPainter(self)
-        brush = QtGui.QBrush()
-
-        brush.setColor(QtGui.QColor("green"))
-        brush.setStyle(Qt.SolidPattern)
-        rect = QtCore.QRect(QPoint(0, 0), QSize(painter.device().width(), painter.device().height()))
-        painter.fillRect(rect, brush)
-
-        pen = painter.pen()
-        pen.setColor(QtGui.QColor('white'))
-        painter.setPen(pen)
-
-        font = painter.font()
-        font.setFamily('Times')
-        font.setPointSize(10)
-        painter.setFont(font)
-
-        painter.drawText(rect, Qt.AlignCenter,
-                         "Inputput->{}\nnode->{}\nOutput->{}".format(self.inputLayer, self.nodeNum, self.outputLayer))
-
-        painter.end()
+    def __init__(self, size, parent=None):
+        super(FullConnectedLayerWidget, self).__init__(size, parent)
 
 
 # 神经网络数据管道组件
-class NNDataPipe(QWidget):
-    def __init__(self, parent, inputObject, outputObject):
-        super(NNDataPipe, self).__init__(parent)
-        self.inputObject = inputObject
-        self.outputObject = outputObject
+class NNPipe(QGraphicsPathItem):
+    def __init__(self, parent=None):
+        super(NNPipe, self).__init__(parent)
 
-    def paintEvent(self, e: QtGui.QPaintEvent) -> None:
-        # TODO 实现渲染函数
-        pass
+        self.width = 3.0
+
+        self._pen = QPen(QColor("#000"))
+        self._pen.setWidthF(self.width)
+
+        self._penDrag = QPen(QColor("#000"))
+        self._penDrag.setStyle(Qt.DashDotLine)
+        self._penDrag.setWidthF(self.width)
+
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setZValue(-1)
+
+        self.pointSource = QPointF(0, 0)
+        self.pointDestination = QPointF(0, 0)
+
+    def CalcuPath(self):
+        path = QPainterPath(self.pointSource)
+        path.lineTo(self.pointDestination)
+        return path
+
+    def boundingRect(self) -> QtCore.QRectF:
+        return self.shape().boundingRect()
+
+    def shape(self) -> QtGui.QPainterPath:
+        return self.CalcuPath()
+
+    def paint(self, painter: QtGui.QPainter, option: 'QStyleOptionGraphicsItem', widget=None) -> None:
+        self.setPath(self.CalcuPath())
+        path = self.path()
+
+        if self.edge.destObject is None:
+            # 绘制拖拽线
+            painter.setPen(self._penDrag)
+            painter.drawPath(path)
+        else:
+            # 绘制连接线
+            painter.setPen(self._pen)
+            painter.drawPath(path)
+
+# TODO 添加pipe管理类
