@@ -20,6 +20,7 @@ class MainWindow(QMainWindow):
 
         self.ui.nnView = Components.NNGraphicsView(self.ui.centralwidget)
         self.ui.nnView.setObjectName(u"nnView")
+        self.ui.nnView.setMinimumSize(500, 800)
         self.ui.horizontalLayout.addWidget(self.ui.nnView)
         self.nnView = self.ui.nnView
 

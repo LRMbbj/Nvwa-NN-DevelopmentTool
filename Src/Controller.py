@@ -28,11 +28,11 @@ class Controller:
         nnInputNum = 0
         nnOutputNum = 0
 
-        value, ok = QInputDialog.getInt(self.view, "输入", "输入层节点数", min=1)
+        value, ok = QInputDialog.getInt(self.ui, "输入", "输入层节点数", min=1)
         if ok:
             nnInputNum = value
 
-        value, ok = QInputDialog.getInt(self.view, "输入", "输出层节点数", min=1)
+        value, ok = QInputDialog.getInt(self.ui, "输入", "输出层节点数", min=1)
         if ok:
             nnOutputNum = value
 
@@ -51,26 +51,22 @@ class Controller:
 
         layerItems = self.model.nn.layers
 
-        value, ok = QInputDialog.getItem(self.view, "输入", "输入层对象", [str(x) for x in layerItems] + [inputLayerName])
-        if ok:
-            layerInputObject = (value, self.model)[value not in ioLayerNames]
+        # value, ok = QInputDialog.getItem(self.view, "输入", "输入层对象", [str(x) for x in layerItems] + [inputLayerName])
+        # if ok:
+        #     layerInputObject = (value, self.model)[value not in ioLayerNames]
+        #
+        # value, ok = QInputDialog.getItem(self.view, "输入", "输出层对象", [str(x) for x in layerItems] + [outputLayerName])
+        # if ok:
+        #     layerOutputObject = (value, self.model)[value not in ioLayerNames]
 
-        value, ok = QInputDialog.getItem(self.view, "输入", "输出层对象", [str(x) for x in layerItems] + [outputLayerName])
-        if ok:
-            layerOutputObject = (value, self.model)[value not in ioLayerNames]
-
-        value, ok = QInputDialog.getInt(self.view, "输入", "节点数", min=1)
+        value, ok = QInputDialog.getInt(self.ui, "输入", "节点数", min=1)
         if ok:
             nodeNum = value
 
-        assert layerInputObject is not None and layerOutputObject is not None and nodeNum > 0
-        "Layer IO layer cannot be empty"
+        assert nodeNum > 0
 
         # model处理
-        self.model.CreateFullConnectedLayer(nodeNum, layerInputObject, layerOutputObject)
+        # self.model.CreateFullConnectedLayer(nodeNum, layerInputObject, layerOutputObject)
 
         # view处理
-        fullConnectedLayerWidget = self.view.DisplayNewLayer("FullConnectedLayer")
-        fullConnectedLayerWidget.SetInputLayer(layerInputObject)
-        fullConnectedLayerWidget.SetOutputLayer(layerOutputObject)
-        fullConnectedLayerWidget.SetNodeNum(nodeNum)
+        fullConnectedLayerWidget = self.view.DisplayNewLayer("FullConnectedLayer", nodeNum)

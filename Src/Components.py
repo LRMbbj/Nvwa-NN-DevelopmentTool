@@ -34,7 +34,14 @@ class NNGraphicsScene(QGraphicsScene):
 class NNGraphicsView(QGraphicsView):
     def __init__(self, parent):
         super(NNGraphicsView, self).__init__(parent)
+
+        self.dragPipe = None
+        self.dragStartItem = None
+
+        self.drawPipeEnable = False
+
         self.scene = NNGraphicsScene(self)
+        self.scene.setSceneRect(QRectF(0, 0, self.size().width(), self.size().height()))
         self.setScene(self.scene)
         self.setDragMode(self.RubberBandDrag)
 
@@ -44,13 +51,59 @@ class NNGraphicsView(QGraphicsView):
                             QPainter.SmoothPixmapTransform)
 
         self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.setTransformationAnchor(self.AnchorUnderMouse)
 
     def DisplayNewLayer(self, pos, layer):
         layer.setPos(pos)
         self.scene.AddLayer(layer)
+
+    def PipeDragStart(self, item):
+        self.dragStartItem = item
+        self.dragPipe = NNPipe(self.scene, self.dragStartItem, None)
+
+    def PipeDragEnd(self, item):
+        newEdge = NNPipe(self.scene, self.dragStartItem, item)
+        self.dragPipe.Remove()
+        self.dragPipe = None
+        newEdge.Store()
+        
+    def keyReleaseEvent(self, event: QtGui.QKeyEvent) -> None:
+        if event.key() == Qt.Key_E:
+            self.drawPipeEnable = ~self.drawPipeEnable
+            
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+        item = self.itemAt(event.pos())
+        if event.button() == Qt.LeftButton and self.drawPipeEnable:
+            if isinstance(item, NNLayerWidget):
+                self.PipeDragStart(item)
+        elif event.button() == Qt.RightButton:
+            print(item)
+            if item is not None and isinstance(item, GraphicPipe):
+                item.pipeWarp.Remove()
+        else:
+            super(NNGraphicsView, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
+        if self.drawPipeEnable:
+            self.drawPipeEnable = False
+            item = self.itemAt(event.pos())
+            if isinstance(item, NNLayerWidget) and item is not self.dragStartItem:
+                self.PipeDragEnd(item)
+            else:
+                self.dragPipe.Remove()
+                self.dragPipe = None
+        else:
+            super().mouseReleaseEvent(event)
+            
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
+        pos = event.pos()
+        if self.drawPipeEnable and self.dragPipe is not None:
+            onPos = self.mapToScene(event.pos())
+            self.dragPipe.graphicPipe.SetDestinationPos(onPos)
+            self.dragPipe.graphicPipe.update()
+        super(NNGraphicsView, self).mouseMoveEvent(event)
 
 
 # 神经网络层组件
@@ -67,6 +120,12 @@ class NNLayerWidget(QGraphicsRectItem):
     def SetNodeNum(self, nodeNum):
         self.nodeNum = nodeNum
         self.nodeNumWidget.setPlainText(str(self.nodeNum))
+
+    def mouseMoveEvent(self, event) -> None:
+        super(NNLayerWidget, self).mouseMoveEvent(event)
+        if self.isSelected():
+            for pipe in [x for x in self.scene().pipes if x.pipeWarp.startItem == self or x.pipeWarp.endItem == self]:
+                pipe.pipeWarp.UpdatePositions()
 
 
 class InputLayerWidget(NNLayerWidget):
@@ -85,11 +144,12 @@ class FullConnectedLayerWidget(NNLayerWidget):
 
 
 # 神经网络数据管道组件
-class NNPipe(QGraphicsPathItem):
-    def __init__(self, parent=None):
-        super(NNPipe, self).__init__(parent)
+class GraphicPipe(QGraphicsPathItem):
+    def __init__(self, pipeWarp, parent=None):
+        super(GraphicPipe, self).__init__(parent)
 
-        self.width = 3.0
+        self.width = 10.0
+        self.pipeWarp = pipeWarp
 
         self._pen = QPen(QColor("#000"))
         self._pen.setWidthF(self.width)
@@ -104,6 +164,14 @@ class NNPipe(QGraphicsPathItem):
         self.pointSource = QPointF(0, 0)
         self.pointDestination = QPointF(0, 0)
 
+        self.setSelected(True)
+
+    def SetSourcePos(self, pos):
+        self.pointSource = pos
+
+    def SetDestinationPos(self, pos):
+        self.pointDestination = pos
+
     def CalcuPath(self):
         path = QPainterPath(self.pointSource)
         path.lineTo(self.pointDestination)
@@ -115,11 +183,11 @@ class NNPipe(QGraphicsPathItem):
     def shape(self) -> QtGui.QPainterPath:
         return self.CalcuPath()
 
-    def paint(self, painter: QtGui.QPainter, option: 'QStyleOptionGraphicsItem', widget=None) -> None:
+    def paint(self, painter: QtGui.QPainter, option, widget=None) -> None:
         self.setPath(self.CalcuPath())
         path = self.path()
 
-        if self.edge.destObject is None:
+        if self.pipeWarp.endItem is None:
             # 绘制拖拽线
             painter.setPen(self._penDrag)
             painter.drawPath(path)
@@ -128,4 +196,47 @@ class NNPipe(QGraphicsPathItem):
             painter.setPen(self._pen)
             painter.drawPath(path)
 
-# TODO 添加pipe管理类
+
+class NNPipe:
+    def __init__(self, scene, startItem, endItem):
+        super(NNPipe, self).__init__()
+        self.scene = scene
+        self.startItem = startItem
+        self.endItem = endItem
+
+        # 创建图形
+        self.graphicPipe = GraphicPipe(self)
+        self.scene.AddPipe(self.graphicPipe)
+
+        if self.startItem is not None:
+            self.UpdatePositions()
+
+    def Store(self):
+        # self.scene.AddPipe(self.graphicPipe)
+        pass
+
+    def UpdatePositions(self):
+        sourcePos = self.startItem.pos()
+        sourcePatch = self.startItem.rect().size()
+        self.graphicPipe.SetSourcePos(
+            QPointF(sourcePos.x() + sourcePatch.width() / 2, sourcePos.y() + sourcePatch.height() / 2))
+
+        if self.endItem is not None:
+            endPos = self.endItem.pos()
+            endPatch = self.endItem.rect().size()
+            self.graphicPipe.SetDestinationPos(
+                QPointF(endPos.x() + endPatch.width() / 2, endPos.y() + endPatch.height() / 2))
+        else:
+            self.graphicPipe.SetDestinationPos(
+                QPointF(sourcePos.x() + sourcePatch.width() / 2, sourcePos.y() + sourcePatch.height() / 2))
+
+        self.graphicPipe.update()
+
+    def RemoveCurrentItems(self):
+        self.startItem = None
+        self.endItem = None
+
+    def Remove(self):
+        self.RemoveCurrentItems()
+        self.scene.RemovePipe(self.graphicPipe)
+        self.graphicPipe = None
