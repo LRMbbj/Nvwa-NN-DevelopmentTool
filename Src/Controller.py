@@ -15,15 +15,22 @@ class Controller:
         self.model = Model.Model()
         self.view = View.MainWindow()
         self.ui = self.view.ui
+        self.nnView = self.ui.nnView
 
         # 绑定处理函数
-        self.ui.createNN.triggered.connect(self.OnCreateNNClicked)
-        self.ui.createFullConnectedLayer.clicked.connect(self.OnCreateFullConnectedLayerClicked)
+        self.SignalInit()
 
         self.ui.show()
 
+    def SignalInit(self):
+        self.ui.createNN.triggered.connect(self.OnCreateNNClicked)
+        self.ui.createFullConnectedLayer.clicked.connect(self.OnCreateFullConnectedLayerClicked)
+        self.nnView.signalConnectLayer.connect(self.OnConnectLayer)
+        self.nnView.signalInsertLayer.connect(self.OnInsertLayer)
+        self.nnView.signalDisconnectLayer.connect(self.OnDisconnectLayer)
+
     def OnCreateNNClicked(self):
-        print("Press createNN")
+        print("Create NN")
 
         nnInputNum = 0
         nnOutputNum = 0
@@ -45,19 +52,10 @@ class Controller:
         outputLayerWidget = self.view.DisplayNewLayer("OutputLayer", nnOutputNum)
 
     def OnCreateFullConnectedLayerClicked(self):
-        layerInputObject = None
-        layerOutputObject = None
+        print("Create FC Layer")
         nodeNum = 0
 
         layerItems = self.model.nn.layers
-
-        # value, ok = QInputDialog.getItem(self.view, "输入", "输入层对象", [str(x) for x in layerItems] + [inputLayerName])
-        # if ok:
-        #     layerInputObject = (value, self.model)[value not in ioLayerNames]
-        #
-        # value, ok = QInputDialog.getItem(self.view, "输入", "输出层对象", [str(x) for x in layerItems] + [outputLayerName])
-        # if ok:
-        #     layerOutputObject = (value, self.model)[value not in ioLayerNames]
 
         value, ok = QInputDialog.getInt(self.ui, "输入", "节点数", min=1)
         if ok:
@@ -65,8 +63,13 @@ class Controller:
 
         assert nodeNum > 0
 
-        # model处理
-        # self.model.CreateFullConnectedLayer(nodeNum, layerInputObject, layerOutputObject)
-
-        # view处理
         fullConnectedLayerWidget = self.view.DisplayNewLayer("FullConnectedLayer", nodeNum)
+
+    def OnConnectLayer(self, inputLayer, outputLayer):
+        print("Connect Layer {} -> {}".format(inputLayer, outputLayer))
+
+    def OnInsertLayer(self, sourceLayer, destinationLayer, insertLayer):
+        print("{}->\\{}/->{}".format(sourceLayer, destinationLayer, insertLayer))
+
+    def OnDisconnectLayer(self, sourceLayer, destinationLayer):
+        print("Disconnect Layer {} -X-> {}".format(sourceLayer, destinationLayer))

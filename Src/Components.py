@@ -1,7 +1,7 @@
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtCore import Qt, QPoint, QSize, QLine, QRectF, QPointF, QSizeF
+from PyQt5.QtCore import Qt, QRectF, QPointF, pyqtSignal
 from PyQt5.QtGui import QPainter, QBrush, QColor, QPen, QPainterPath
-from PyQt5.QtWidgets import QWidget, QGraphicsItem, QGraphicsScene, QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, \
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsScene, QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, \
     QGraphicsPathItem
 
 
@@ -30,8 +30,37 @@ class NNGraphicsScene(QGraphicsScene):
         self.removeItem(pipe)
 
 
+# 神经网络层组件
+class NNLayerWidget(QGraphicsRectItem):
+    def __init__(self, size, parent=None):
+        super(NNLayerWidget, self).__init__(parent)
+        self.setRect(QRectF(QPointF(0, 0), size))
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.ItemIsMovable)
+
+        self.nodeNum = 0
+        self.nodeNumWidget = QGraphicsTextItem(str(self.nodeNum), self)
+
+    def SetNodeNum(self, nodeNum):
+        self.nodeNum = nodeNum
+        self.nodeNumWidget.setPlainText(str(self.nodeNum))
+
+    def mouseMoveEvent(self, event) -> None:
+        if self.isSelected():
+            for pipe in [x for x in self.scene().pipes if x.pipeWarp.startItem == self or x.pipeWarp.endItem == self]:
+                pipe.pipeWarp.UpdatePositions()
+        super(NNLayerWidget, self).mouseMoveEvent(event)
+
+    def dropEvent(self, e) -> None:
+        print(e)
+
+
 # 神经网络场景视图
 class NNGraphicsView(QGraphicsView):
+    signalConnectLayer = pyqtSignal(NNLayerWidget, NNLayerWidget)
+    signalInsertLayer = pyqtSignal(NNLayerWidget, NNLayerWidget, NNLayerWidget)
+    signalDisconnectLayer = pyqtSignal(NNLayerWidget, NNLayerWidget)
+
     def __init__(self, parent):
         super(NNGraphicsView, self).__init__(parent)
 
@@ -39,6 +68,7 @@ class NNGraphicsView(QGraphicsView):
         self.dragStartItem = None
 
         self.drawPipeEnable = False
+        self.insertLayerEnable = False
 
         self.scene = NNGraphicsScene(self)
         self.scene.setSceneRect(QRectF(0, 0, self.size().width(), self.size().height()))
@@ -64,83 +94,80 @@ class NNGraphicsView(QGraphicsView):
         self.dragPipe = NNPipe(self.scene, self.dragStartItem, None)
 
     def PipeDragEnd(self, item):
+        # self.signalConnectLayer.emit(self.dragStartItem, item)
         newEdge = NNPipe(self.scene, self.dragStartItem, item)
         self.dragPipe.Remove()
         self.dragPipe = None
         newEdge.Store()
+        self.signalConnectLayer.emit(self.dragStartItem, item)
         
     def keyReleaseEvent(self, event: QtGui.QKeyEvent) -> None:
         if event.key() == Qt.Key_E:
             self.drawPipeEnable = ~self.drawPipeEnable
+            self.insertLayerEnable = False
+        elif event.key() == Qt.Key_R:
+            self.insertLayerEnable = ~self.insertLayerEnable
+            self.drawPipeEnable = False
             
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         item = self.itemAt(event.pos())
-        if event.button() == Qt.LeftButton and self.drawPipeEnable:
+        if item is not None and event.button() == Qt.LeftButton and self.drawPipeEnable:
+            # 连接物体
             if isinstance(item, NNLayerWidget):
                 self.PipeDragStart(item)
-        elif event.button() == Qt.RightButton:
-            print(item)
-            if item is not None and isinstance(item, GraphicPipe):
+        elif item is not None and event.button() == Qt.RightButton and self.drawPipeEnable :
+            # 删除连接
+            if isinstance(item, GraphicPipe):
+                pipe = item.pipeWarp
+                self.signalDisconnectLayer.emit(pipe.startItem, pipe.endItem)
                 item.pipeWarp.Remove()
         else:
             super(NNGraphicsView, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
+        onItem = self.itemAt(event.pos())
         if self.drawPipeEnable:
             self.drawPipeEnable = False
-            item = self.itemAt(event.pos())
-            if isinstance(item, NNLayerWidget) and item is not self.dragStartItem:
-                self.PipeDragEnd(item)
-            else:
+            if isinstance(onItem, NNLayerWidget) and onItem is not self.dragStartItem:
+                self.PipeDragEnd(onItem)
+            elif self.dragPipe is not None:
                 self.dragPipe.Remove()
                 self.dragPipe = None
-        else:
-            super().mouseReleaseEvent(event)
+        elif self.insertLayerEnable and onItem is not None:
+            collidingItems = self.scene.collidingItems(onItem)
+            pipes = [x for x in collidingItems if isinstance(x, GraphicPipe)]
+            if len(pipes) == 1 and not pipes[0].pipeWarp.IsConnected(onItem):
+                pipe = pipes[0].pipeWarp
+                self.signalInsertLayer.emit(pipe.startItem, pipe.endItem, onItem)
+                pipes[0].pipeWarp.Insert(onItem)
+            self.insertLayerEnable = False
+        super().mouseReleaseEvent(event)
             
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
         pos = event.pos()
         if self.drawPipeEnable and self.dragPipe is not None:
-            onPos = self.mapToScene(event.pos())
+            onPos = self.mapToScene(pos)
             self.dragPipe.graphicPipe.SetDestinationPos(onPos)
             self.dragPipe.graphicPipe.update()
         super(NNGraphicsView, self).mouseMoveEvent(event)
 
 
-# 神经网络层组件
-class NNLayerWidget(QGraphicsRectItem):
-    def __init__(self, size, parent=None):
-        super(NNLayerWidget, self).__init__(parent)
-        self.setRect(QRectF(QPointF(0, 0), size))
-        self.setFlag(QGraphicsItem.ItemIsSelectable)
-        self.setFlag(QGraphicsItem.ItemIsMovable)
-
-        self.nodeNum = 0
-        self.nodeNumWidget = QGraphicsTextItem(str(self.nodeNum), self)
-
-    def SetNodeNum(self, nodeNum):
-        self.nodeNum = nodeNum
-        self.nodeNumWidget.setPlainText(str(self.nodeNum))
-
-    def mouseMoveEvent(self, event) -> None:
-        super(NNLayerWidget, self).mouseMoveEvent(event)
-        if self.isSelected():
-            for pipe in [x for x in self.scene().pipes if x.pipeWarp.startItem == self or x.pipeWarp.endItem == self]:
-                pipe.pipeWarp.UpdatePositions()
-
-
 class InputLayerWidget(NNLayerWidget):
     def __init__(self, size, parent=None):
         super(InputLayerWidget, self).__init__(size, parent)
+        self.setBrush(QBrush(Qt.red))
 
 
 class OutputLayerWidgt(NNLayerWidget):
     def __init__(self, size, parent=None):
         super(OutputLayerWidgt, self).__init__(size, parent)
+        self.setBrush(QBrush(Qt.blue))
 
 
 class FullConnectedLayerWidget(NNLayerWidget):
     def __init__(self, size, parent=None):
         super(FullConnectedLayerWidget, self).__init__(size, parent)
+        self.setBrush(QBrush(Qt.yellow))
 
 
 # 神经网络数据管道组件
@@ -240,3 +267,11 @@ class NNPipe:
         self.RemoveCurrentItems()
         self.scene.RemovePipe(self.graphicPipe)
         self.graphicPipe = None
+
+    def Insert(self, item):
+        newPipe = NNPipe(self.scene, item, self.endItem)
+        self.endItem = item
+        self.UpdatePositions()
+
+    def IsConnected(self, item):
+        return self.startItem == item or self.endItem == item
