@@ -35,6 +35,8 @@ class MainWindow(QMainWindow):
         self.nnView.DisplayNewLayer(QPoint(0, 0), newLayer)
         newLayer.SetNodeNum(nodeNum)
         self.layers.append(newLayer)
+        return newLayer
 
     def DisplayNewPipe(self, obj1, obj2):
-        pass
+        newEdge = Components.NNPipe(self.nnView.scene, obj1, obj2)
+        newEdge.Store()

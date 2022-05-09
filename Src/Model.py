@@ -14,8 +14,7 @@ class Model:
         self.nn.AppendLayer(layer)
         return layer
 
-    @staticmethod
-    def InsertBetweenLayers(pluginLayer, inputLayer, outputLayer):
+    def InsertBetweenLayers(self, inputLayer, outputLayer, pluginLayer):
         pluginLayer.SetInputObject(inputLayer)
         inputLayer.SetOutputObject(pluginLayer)
 
@@ -27,6 +26,14 @@ class Model:
         removingLayer.outputObject.SetInputObject(removingLayer.inputObject)
 
         self.nn.RemoveLayer(removingLayer)
+
+    def ConnectLayer(self, sourceLayer, destinationLayer):
+        sourceLayer.SetOutputObject(destinationLayer)
+        destinationLayer.SetInputObject(sourceLayer)
+
+    def DisconnectLayer(self, sourceLayer, destinationLayer):
+        sourceLayer.SetInputObject(None)
+        destinationLayer.SetInputObject(None)
 
     def SerializeModel(self, modelName, filepath):
         self.nn.Serialize(modelName, filepath)

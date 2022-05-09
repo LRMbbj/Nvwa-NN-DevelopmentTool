@@ -1,4 +1,5 @@
 import re
+import uuid
 from enum import Enum
 
 
@@ -20,20 +21,24 @@ FUNCNAMES = {
 
 class NNLayer:
     def __init__(self, inputObject=None, outputObject=None):
-        self.inputObject = inputObject
-        self.outputObject = outputObject
+        self.__inputObject = inputObject
+        self.__outputObject = outputObject
+        self.__uuid = uuid.uuid1()
 
     def SetInputObject(self, obj):
-        self.inputObject = obj
+        self.__inputObject = obj
 
     def GetInputObject(self):
-        return self.inputObject
+        return self.__inputObject
 
     def SetOutputObject(self, obj):
-        self.outputObject = obj
+        self.__outputObject = obj
 
     def GetOutputObject(self):
-        return self.outputObject
+        return self.__outputObject
+
+    def GetUUID(self):
+        return self.__uuid
 
 
 class NNModel(NNLayer):
@@ -49,13 +54,13 @@ class NNModel(NNLayer):
 
         self.formatFile = "../Resources/ModelSample.txt"
 
-        self.layers = [self.nnOutputLayer]
-
-    def AppendLayer(self, layer):
-        self.layers.append(layer)
-
-    def RemoveLayer(self, layer):
-        self.layers.remove(layer)
+    #     self.layers = [self.nnOutputLayer]
+    #
+    # def AppendLayer(self, layer):
+    #     self.layers.append(layer)
+    #
+    # def RemoveLayer(self, layer):
+    #     self.layers.remove(layer)
 
     def Serialize(self, modelName, filepath):
         layerSerialized = ""
@@ -85,9 +90,9 @@ class NNFullConnectedLayer(NNLayer):
 
     def Serialize(self):
         # 线性层输入输出连接性检查
-        assert self.inputObject is not None, "inputObject cannot be None"
+        assert self.__inputObject is not None, "inputObject cannot be None"
 
-        out = "            nn.Linear(%d, %d),\n" % (self.inputObject.nodeNum, self.nodeNum)
+        out = "            nn.Linear(%d, %d),\n" % (self.__inputObject.nodeNum, self.nodeNum)
         if self.activationFunc != ActivationFuncs.NoFunc:
             out += "            nn.%s(inplace=True),\n" % FUNCNAMES[self.activationFunc]
 
